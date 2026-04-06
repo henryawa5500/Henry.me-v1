@@ -1,0 +1,58 @@
+﻿@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: light;
+  }
+
+  * {
+    @apply box-border;
+  }
+
+  body {
+    @apply bg-background text-primary font-sans min-h-screen;
+  }
+
+  #root {
+    @apply min-h-screen;
+  }
+}
+
+@layer components {
+  .page-transition {
+    @apply animate-fadeIn;
+  }
+
+  .card-gradient {
+    background: linear-gradient(135deg, #f6f6f6 0%, #ededed 100%);
+  }
+
+  .hero-banner {
+    background-color: #f2f2f2;
+    background-image:
+      radial-gradient(circle at 20% 20%, rgba(0,0,0,0.06), transparent 55%),
+      radial-gradient(circle at 80% 0%, rgba(0,0,0,0.05), transparent 50%);
+  }
+
+  .surface-panel {
+    @apply bg-white border border-border shadow-sm;
+  }
+
+  .focus-ring {
+    @apply focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+

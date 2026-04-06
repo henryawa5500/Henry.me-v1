@@ -1,0 +1,73 @@
+﻿export const mockProducts = [
+  {
+    id: 1,
+    name: 'Miyamoto Tee',
+    price: 12000,
+    tags: ['Best Sellers'],
+    image: '/products/MIYAMOTO-TEE.png',
+  },
+  {
+    id: 2,
+    name: 'Bands Tee (Black)',
+    price: 15000,
+    tags: ['Best Sellers'],
+    image: '/products/BANDS-TEE(B).png',
+  },
+  {
+    id: 3,
+    name: 'Dexter Tee',
+    price: 15000,
+    tags: ['Best Sellers'],
+    image: '/products/DEXTER-TEE.png',
+  },
+  {
+    id: 4,
+    name: 'Musashi Tee',
+    price: 20000,
+    tags: ['New Arrivals'],
+    image: '/products/THE LONG-TEE.png',
+  },
+  {
+    id: 5,
+    name: 'You Can Have It All Tee',
+    price: 15000,
+    tags: ['New Arrivals'],
+    image: '/products/ALL-TEE.png',
+  },
+  {
+    id: 6,
+    name: 'Swag Lifestyle Tee',
+    price: 15000,
+    tags: ['New Arrivals'],
+    image: '/products/SWAG-TEE.png',
+  },
+  {
+    id: 7,
+    name: 'Bands Tee (White)',
+    price: 15000,
+    tags: ['Best Sellers'],
+    image: '/products/BAND-TEE(W).png',
+    discount: {
+      enabled: true,
+      percent: 10,
+    },
+  },
+  {
+    id: 8,
+    name: 'Winning Tee',
+    price: 12000,
+    tags: ['New Arrivals'],
+    image: '/products/WINNING-TEE(W).png',
+    discount: {
+      enabled: true,
+      percent: 15,
+    },
+  },
+  {
+    id: 9,
+    name: 'Street Tee',
+    price: 15000,
+    tags: ['Best Sellers'],
+    image: '/products/FLY-TEE.png',
+  },
+]
