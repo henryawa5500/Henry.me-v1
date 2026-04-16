@@ -5,6 +5,7 @@
     price: 12000,
     tags: ['Best Sellers'],
     image: '/products/MIYAMOTO-TEE.png',
+    stock: 12,
   },
   {
     id: 2,
@@ -12,6 +13,7 @@
     price: 15000,
     tags: ['Best Sellers'],
     image: '/products/BANDS-TEE(B).png',
+    stock: 8,
   },
   {
     id: 3,
@@ -19,6 +21,7 @@
     price: 15000,
     tags: ['Best Sellers'],
     image: '/products/DEXTER-TEE.png',
+    stock: 5,
   },
   {
     id: 4,
@@ -26,6 +29,7 @@
     price: 20000,
     tags: ['New Arrivals'],
     image: '/products/THE LONG-TEE.png',
+    stock: 3,
   },
   {
     id: 5,
@@ -33,6 +37,7 @@
     price: 15000,
     tags: ['New Arrivals'],
     image: '/products/ALL-TEE.png',
+    stock: 0,
   },
   {
     id: 6,
@@ -40,6 +45,7 @@
     price: 15000,
     tags: ['New Arrivals'],
     image: '/products/SWAG-TEE.png',
+    stock: 7,
   },
   {
     id: 7,
@@ -51,6 +57,7 @@
       enabled: true,
       percent: 10,
     },
+    stock: 4,
   },
   {
     id: 8,
@@ -62,6 +69,7 @@
       enabled: true,
       percent: 15,
     },
+    stock: 2,
   },
   {
     id: 9,
@@ -69,5 +77,6 @@
     price: 15000,
     tags: ['Best Sellers'],
     image: '/products/FLY-TEE.png',
+    stock: 9,
   },
 ]

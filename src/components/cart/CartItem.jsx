@@ -1,33 +1,38 @@
-﻿import { MinusIcon, PlusIcon, TrashIcon } from '../ui/Icons.jsx'
-import { formatCurrency } from '../../utils/formatCurrency.js'
-import RatingStars from '../ui/RatingStars.jsx'
-import { getDiscountedPrice, isDiscountActive } from '../../utils/discounts.js'
+﻿import { MinusIcon, PlusIcon, TrashIcon } from "../ui/Icons.jsx";
+import { formatCurrency } from "../../utils/formatCurrency.js";
+import RatingStars from "../ui/RatingStars.jsx";
+import { getDiscountedPrice, isDiscountActive } from "../../utils/discounts.js";
 
 const CartItem = ({ item, onRemove, onUpdate }) => {
-  const discountedPrice = getDiscountedPrice(item.product)
-  const hasDiscount = isDiscountActive(item.product) && discountedPrice !== null
+  const discountedPrice = getDiscountedPrice(item.product);
+  const hasDiscount =
+    isDiscountActive(item.product) && discountedPrice !== null;
 
   return (
     <div className="flex flex-col gap-4 border-b border-border py-4 sm:flex-row sm:items-center">
       <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-lg border border-border bg-[#F6F6F6]">
-      {item.product.image ? (
-        <img
-          src={item.product.image}
-          alt={item.product.name}
-          className="h-full w-full object-cover"
-        />
-      ) : (
-        <span className="text-xs text-muted">Image</span>
-      )}
+        {item.product.image ? (
+          <img
+            src={item.product.image}
+            alt={item.product.name}
+            className="h-full w-full object-cover"
+          />
+        ) : (
+          <span className="text-xs text-muted">Image</span>
+        )}
       </div>
       <div className="flex-1">
         <div className="flex items-start justify-between gap-2">
           <div>
-            <p className="text-sm font-semibold text-primary">{item.product.name}</p>
+            <p className="text-sm font-semibold text-primary">
+              {item.product.name}
+            </p>
             <RatingStars rating={4.5} className="mt-1" />
             <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
               <span className="font-semibold">
-                {formatCurrency(hasDiscount ? discountedPrice : item.product.price)}
+                {formatCurrency(
+                  hasDiscount ? discountedPrice : item.product.price,
+                )}
               </span>
               {hasDiscount ? (
                 <span className="text-xs text-muted line-through">
@@ -66,8 +71,7 @@ const CartItem = ({ item, onRemove, onUpdate }) => {
         </button>
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default CartItem
-
+export default CartItem;

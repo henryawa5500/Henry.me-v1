@@ -4,6 +4,8 @@ import { formatCurrency } from '../../utils/formatCurrency.js'
 
 const toastCopy = {
   order_new: 'New order received',
+  payment_verified: 'Payment verified',
+  payment_failed: 'Payment failed',
   order_fulfilled: 'Order fulfilled',
   order_cancelled: 'Order cancelled',
 }
@@ -35,7 +37,7 @@ const NotificationsToast = () => {
     order?.items?.reduce((sum, item) => sum + (item.quantity || 0), 0) || 0
 
   return (
-    <div className="fixed bottom-24 right-4 z-50 w-[280px] rounded-xl border border-border bg-white p-4 shadow-lg">
+    <div className="fixed bottom-28 left-4 right-4 z-50 rounded-xl border border-border bg-white p-4 shadow-lg sm:bottom-6 sm:left-auto sm:right-6 sm:w-[280px]">
       <div className="flex items-start justify-between gap-2">
         <div>
           <p className="text-sm font-semibold text-primary">{title}</p>

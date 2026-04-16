@@ -72,7 +72,7 @@ const MobileTopBar = () => {
             open={showNotifications}
             onClose={handleNotificationsClose}
             panelId="mobile-notifications"
-            className="right-0 top-12 w-64"
+            className="sm:right-0 sm:top-12 sm:w-64"
             notifications={notifications}
             orders={orders}
           />

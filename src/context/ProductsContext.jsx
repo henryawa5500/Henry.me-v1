@@ -53,6 +53,10 @@ export const ProductsProvider = ({ children }) => {
     )
   }
 
+  const updateMany = (updater) => {
+    setProducts((prev) => prev.map((product) => updater(product)))
+  }
+
   const removeProduct = (id) => {
     setProducts((prev) => prev.filter((product) => product.id !== id))
   }
@@ -71,6 +75,7 @@ export const ProductsProvider = ({ children }) => {
     rawProducts: products,
     addProduct,
     updateProduct,
+    updateMany,
     removeProduct,
     resetProducts,
   }

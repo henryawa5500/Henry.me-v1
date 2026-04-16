@@ -9,6 +9,8 @@ const ProductCard = ({ product }) => {
 
   const discountedPrice = getDiscountedPrice(product)
   const hasDiscount = isDiscountActive(product) && discountedPrice !== null
+  const isOutOfStock =
+    typeof product?.stock === 'number' && product.stock <= 0
 
   return (
     <div className="group rounded-xl border border-border bg-white p-3 transition hover:-translate-y-1 hover:shadow-md">
@@ -34,6 +36,11 @@ const ProductCard = ({ product }) => {
               -{product.discount.percent}%
             </span>
           ) : null}
+          {isOutOfStock ? (
+            <span className="absolute inset-x-3 bottom-3 rounded-full bg-black/80 px-3 py-1 text-center text-[10px] font-semibold uppercase tracking-wider text-white">
+              Out of stock
+            </span>
+          ) : null}
         </div>
         <div className="mt-3">
           <p className="text-sm font-semibold text-primary">{product.name}</p>
@@ -54,8 +61,9 @@ const ProductCard = ({ product }) => {
         size="sm"
         className="mt-3 w-full lg:opacity-0 lg:group-hover:opacity-100"
         onClick={() => addItem(product)}
+        disabled={isOutOfStock}
       >
-        Add to Cart
+        {isOutOfStock ? 'Out of stock' : 'Add to Cart'}
       </Button>
     </div>
   )

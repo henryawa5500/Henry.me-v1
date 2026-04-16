@@ -1,35 +1,29 @@
-﻿import { useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import Button from '../components/ui/Button.jsx'
-import BottomSheet from '../components/ui/BottomSheet.jsx'
-import Modal from '../components/ui/Modal.jsx'
-import { CardIcon, MinusIcon, PlusIcon } from '../components/ui/Icons.jsx'
+import { MinusIcon, PlusIcon } from '../components/ui/Icons.jsx'
 import { useCart } from '../context/CartContext.jsx'
-import { formatCurrency } from '../utils/formatCurrency.js'
-import useMediaQuery from '../utils/useMediaQuery.js'
-import { getDiscountedPrice, isDiscountActive } from '../utils/discounts.js'
 import { useOrders } from '../context/OrdersContext.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
-import { getEffectivePrice } from '../utils/discounts.js'
-
-const formatCardNumber = (value) =>
-  value
-    .replace(/\D/g, '')
-    .slice(0, 16)
-    .replace(/(\d{4})/g, '$1 ')
-    .trim()
+import { formatCurrency } from '../utils/formatCurrency.js'
+import { getDiscountedPrice, getEffectivePrice, isDiscountActive } from '../utils/discounts.js'
 
 const Checkout = () => {
   const navigate = useNavigate()
   const { items, subtotal, deliveryFee, total, updateQuantity } = useCart()
   const { addOrder } = useOrders()
   const { user } = useAuth()
-  const [showAddCard, setShowAddCard] = useState(false)
-  const [cardholder, setCardholder] = useState('')
-  const [cardNumber, setCardNumber] = useState('')
-  const [expiry, setExpiry] = useState('')
-  const [cvv, setCvv] = useState('')
-  const isDesktop = useMediaQuery('(min-width: 1024px)')
+
+  const [isProcessing, setIsProcessing] = useState(false)
+  const [receiptName, setReceiptName] = useState('')
+
+  const referenceRef = useRef(
+    `HM-${new Date().toISOString().slice(2, 10).replace(/-/g, '')}-${Math.floor(
+      1000 + Math.random() * 9000,
+    )}`,
+  )
+
+  const amountToPay = useMemo(() => total, [total])
 
   if (!items.length) {
     return (
@@ -41,9 +35,29 @@ const Checkout = () => {
     )
   }
 
+  const handleReceiptChange = (event) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+    setReceiptName(file.name)
+  }
+
   const handlePayNow = () => {
+    if (isProcessing) return
+    setIsProcessing(true)
+
+    const paymentPayload = {
+      method: 'Bank Transfer',
+      beneficiary: 'Henry Awa',
+      bank: 'Moniepoint',
+      accountName: 'Henry Eyinnaya Awa',
+      accountNumber: '8062098161',
+      reference: referenceRef.current,
+      status: 'Pending Verification',
+      receiptName: receiptName || '',
+    }
+
     const orderItems = items.map((item) => ({
-      id: item.product.id,
+      productId: item.product.id,
       name: item.product.name,
       image: item.product.image,
       size: item.size,
@@ -51,7 +65,7 @@ const Checkout = () => {
       unitPrice: getEffectivePrice(item.product),
     }))
 
-    addOrder({
+    const createdId = addOrder({
       items: orderItems,
       subtotal,
       deliveryFee,
@@ -61,58 +75,12 @@ const Checkout = () => {
         email: user?.email || '',
       },
       status: 'Pending',
+      payment: paymentPayload,
     })
 
-    setShowAddCard(false)
-    navigate('/order-complete')
+    setIsProcessing(false)
+    navigate(`/payment-pending/${createdId}`)
   }
-
-  const cardForm = (
-    <div className="space-y-4">
-      <h3 className="text-lg font-semibold">Add New Card</h3>
-      <label className="block text-sm font-medium">
-        Cardholder name
-        <input
-          value={cardholder}
-          onChange={(event) => setCardholder(event.target.value)}
-          className="mt-2 h-11 w-full rounded-lg border border-border px-4 text-sm focus-ring"
-          placeholder="Henry Me"
-        />
-      </label>
-      <label className="block text-sm font-medium">
-        Card number
-        <input
-          value={cardNumber}
-          onChange={(event) => setCardNumber(formatCardNumber(event.target.value))}
-          className="mt-2 h-11 w-full rounded-lg border border-border px-4 text-sm focus-ring"
-          placeholder="1234 5678 9012 3456"
-        />
-      </label>
-      <div className="grid grid-cols-2 gap-4">
-        <label className="block text-sm font-medium">
-          Expiry
-          <input
-            value={expiry}
-            onChange={(event) => setExpiry(event.target.value)}
-            className="mt-2 h-11 w-full rounded-lg border border-border px-4 text-sm focus-ring"
-            placeholder="09/27"
-          />
-        </label>
-        <label className="block text-sm font-medium">
-          CVV
-          <input
-            value={cvv}
-            onChange={(event) => setCvv(event.target.value)}
-            className="mt-2 h-11 w-full rounded-lg border border-border px-4 text-sm focus-ring"
-            placeholder="***"
-          />
-        </label>
-      </div>
-      <Button full onClick={handlePayNow}>
-        Pay Now
-      </Button>
-    </div>
-  )
 
   return (
     <div className="page-transition">
@@ -189,32 +157,70 @@ const Checkout = () => {
           </div>
 
           <div className="rounded-2xl border border-border bg-white p-6">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold">Payment</h2>
-              <button
-                type="button"
-                onClick={() => setShowAddCard(true)}
-                className="text-sm font-semibold text-primary focus-ring"
-              >
-                + Add New Card
-              </button>
+            <h2 className="text-lg font-semibold">Payment Method</h2>
+            <p className="mt-2 text-sm text-muted">
+              Bank transfer is the only available method for now.
+            </p>
+
+            <div className="mt-4 rounded-2xl border border-border bg-[#F6F6F6] p-5">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.2em] text-muted">
+                    Bank Transfer : Henry Awa
+                  </p>
+                  <p className="mt-1 text-base font-semibold">Henry Awa</p>
+                </div>
+                <span className="rounded-full bg-black px-3 py-1 text-xs font-semibold text-white">
+                  {formatCurrency(amountToPay)}
+                </span>
+              </div>
+
+              <div className="mt-4 grid gap-3 text-sm text-muted sm:grid-cols-2">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.2em]">Bank</p>
+                  <p className="mt-1 font-semibold text-primary">Moniepoint</p>
+                </div>
+                <div>
+                  <p className="text-xs uppercase tracking-[0.2em]">Account Number</p>
+                  <p className="mt-1 font-semibold text-primary">8062098161</p>
+                </div>
+                <div>
+                  <p className="text-xs uppercase tracking-[0.2em]">Account Name</p>
+                  <p className="mt-1 font-semibold text-primary">
+                    Henry Eyinnaya Awa
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs uppercase tracking-[0.2em]">Reference</p>
+                  <p className="mt-1 font-semibold text-primary">
+                    {referenceRef.current}
+                  </p>
+                </div>
+              </div>
+              <p className="mt-4 text-xs text-muted">
+                Use the reference above to help us match your transfer. Verification
+                usually takes a few minutes.
+              </p>
             </div>
-            <div className="mt-4 rounded-2xl bg-black p-5 text-white">
-              <div className="flex items-center justify-between">
-                <CardIcon className="text-white" />
-                <span className="text-xs uppercase tracking-[0.2em]">VISA</span>
-              </div>
-              <p className="mt-6 text-lg tracking-[0.2em]">**** **** **** 2095</p>
-              <div className="mt-4 flex items-center justify-between text-xs">
-                <div>
-                  <p className="text-white/60">Cardholder</p>
-                  <p className="font-semibold">Henry Me</p>
-                </div>
-                <div>
-                  <p className="text-white/60">Expiry</p>
-                  <p className="font-semibold">09/27</p>
-                </div>
-              </div>
+
+            <div className="mt-5">
+              <label className="block text-sm font-medium text-primary">
+                Upload transfer receipt (optional)
+                <input
+                  type="file"
+                  accept="image/*,application/pdf"
+                  onChange={handleReceiptChange}
+                  className="mt-2 w-full rounded-lg border border-border bg-white px-3 py-2 text-sm focus-ring"
+                />
+              </label>
+              {receiptName ? (
+                <p className="mt-2 text-xs text-muted">Attached: {receiptName}</p>
+              ) : null}
+            </div>
+
+            <div className="mt-4 rounded-lg border border-border bg-white px-4 py-3 text-xs text-muted">
+              You&apos;ll be taken to a verification screen after confirming your
+              transfer.
             </div>
           </div>
         </div>
@@ -236,24 +242,15 @@ const Checkout = () => {
                 <span>{formatCurrency(total)}</span>
               </div>
             </div>
-            <Button full className="mt-6" onClick={handlePayNow}>
-              Pay Now
+            <Button full className="mt-6" onClick={handlePayNow} disabled={isProcessing}>
+              {isProcessing ? 'Verifying Transfer...' : 'I have made transfer'}
             </Button>
+            <p className="mt-3 text-xs text-muted">
+              We&apos;ll verify your transfer and notify you shortly.
+            </p>
           </div>
         </div>
       </div>
-
-      {showAddCard && !isDesktop && (
-        <BottomSheet open={showAddCard} onClose={() => setShowAddCard(false)}>
-          {cardForm}
-        </BottomSheet>
-      )}
-
-      {showAddCard && isDesktop && (
-        <Modal open={showAddCard} onClose={() => setShowAddCard(false)}>
-          {cardForm}
-        </Modal>
-      )}
     </div>
   )
 }

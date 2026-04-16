@@ -1,4 +1,4 @@
-﻿import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import Button from '../components/ui/Button.jsx'
 import RatingStars from '../components/ui/RatingStars.jsx'
@@ -42,6 +42,19 @@ const ProductDetail = () => {
     addItem(product, { size: selectedSize, quantity })
     navigate('/checkout')
   }
+
+  const availableStock =
+    typeof product?.stock === 'number' ? Math.max(product.stock, 0) : null
+  const isOutOfStock = availableStock !== null && availableStock <= 0
+
+  useEffect(() => {
+    if (availableStock === null) return
+    if (availableStock <= 0) {
+      setQuantity(1)
+      return
+    }
+    setQuantity((prev) => Math.min(prev, availableStock))
+  }, [availableStock])
 
   return (
     <div className="page-transition">
@@ -96,6 +109,11 @@ const ProductDetail = () => {
             Premium quality cotton t-shirt with a classic fit. Perfect for everyday
             wear.
           </p>
+          {availableStock !== null && (
+            <p className="text-sm text-muted">
+              {isOutOfStock ? 'Out of stock' : `In stock: ${availableStock}`}
+            </p>
+          )}
 
           <div>
             <p className="text-sm font-semibold">Select Size</p>
@@ -132,7 +150,12 @@ const ProductDetail = () => {
               </span>
               <button
                 type="button"
-                onClick={() => setQuantity((prev) => prev + 1)}
+                onClick={() =>
+                  setQuantity((prev) => {
+                    if (availableStock === null) return prev + 1
+                    return Math.min(prev + 1, availableStock)
+                  })
+                }
                 className="rounded-md border border-border p-1.5 transition hover:border-primary focus-ring"
               >
                 <PlusIcon size={14} />
@@ -141,10 +164,19 @@ const ProductDetail = () => {
           </div>
 
           <div className="flex flex-col gap-3 sm:flex-row">
-            <Button className="w-full sm:flex-1" variant="outline" onClick={handleAddToCart}>
+            <Button
+              className="w-full sm:flex-1"
+              variant="outline"
+              onClick={handleAddToCart}
+              disabled={isOutOfStock}
+            >
               Add to cart
             </Button>
-            <Button className="w-full sm:flex-1" onClick={handleCheckout}>
+            <Button
+              className="w-full sm:flex-1"
+              onClick={handleCheckout}
+              disabled={isOutOfStock}
+            >
               Checkout
             </Button>
           </div>

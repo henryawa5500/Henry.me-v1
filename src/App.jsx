@@ -8,6 +8,7 @@ import Home from './pages/Home.jsx'
 import ProductDetail from './pages/ProductDetail.jsx'
 import Cart from './pages/Cart.jsx'
 import Checkout from './pages/Checkout.jsx'
+import PaymentPending from './pages/PaymentPending.jsx'
 import OrderComplete from './pages/OrderComplete.jsx'
 import Admin from './pages/Admin.jsx'
 
@@ -24,6 +25,7 @@ const App = () => (
       <Route path="/product/:id" element={<ProductDetail />} />
       <Route path="/cart" element={<Cart />} />
       <Route path="/checkout" element={<Checkout />} />
+      <Route path="/payment-pending/:id" element={<PaymentPending />} />
       <Route path="/order-complete" element={<OrderComplete />} />
     </Route>
 

@@ -110,7 +110,7 @@ const Home = () => {
         </div>
       </section>
 
-      <section className="mt-10" id="featured-products">
+      <section className="mt-10 scroll-mt-24 sm:scroll-mt-28 lg:scroll-mt-32" id="featured-products">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <h3 className="text-lg font-semibold">Featured Products</h3>
           <div className="flex flex-wrap items-center gap-3">

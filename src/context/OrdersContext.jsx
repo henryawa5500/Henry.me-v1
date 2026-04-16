@@ -23,7 +23,8 @@ const loadNotifications = () => {
   if (!raw) return []
   try {
     const parsed = JSON.parse(raw)
-    return Array.isArray(parsed) ? parsed : []
+    if (!Array.isArray(parsed)) return []
+    return parsed.filter((item) => item && item.type && item.orderId)
   } catch {
     return []
   }
@@ -61,49 +62,150 @@ export const OrdersProvider = ({ children }) => {
   }
 
   const addOrder = (order) => {
-    setOrders((prev) => {
-      const nextId = prev.length ? Math.max(...prev.map((item) => item.id)) + 1 : 1
-      const nextOrder = {
-        ...order,
-        id: order.id ?? nextId,
-        createdAt: order.createdAt ?? new Date().toISOString(),
-        status: order.status ?? 'Pending',
-      }
+    const nextId = orders.length ? Math.max(...orders.map((item) => item.id)) + 1 : 1
+    const nextOrder = {
+      ...order,
+      id: order.id ?? nextId,
+      createdAt: order.createdAt ?? new Date().toISOString(),
+      status: order.status ?? 'Pending',
+    }
 
-      addNotification({
-        type: 'order_new',
-        orderId: nextOrder.id,
-      })
+    setOrders((prev) => [...prev, nextOrder])
 
-      return [
-        ...prev,
-        nextOrder,
-      ]
+    addNotification({
+      type: 'order_new',
+      orderId: nextOrder.id,
     })
+
+    return nextOrder.id
   }
 
   const updateOrderStatus = (id, status) => {
+    let updatedOrder = null
     setOrders((prev) =>
       prev.map((order) => {
         if (order.id !== id) return order
         if (order.status === status) return order
-        const updated = { ...order, status }
-
-        if (status === 'Fulfilled') {
-          addNotification({
-            type: 'order_fulfilled',
-            orderId: updated.id,
-          })
+        const nextOrder = { ...order, status }
+        if (status === 'Paid') {
+          nextOrder.payment = {
+            ...(order.payment || {}),
+            status: 'Verified',
+            verifiedAt: new Date().toISOString(),
+            failureReason: '',
+          }
         }
+        updatedOrder = nextOrder
+        return updatedOrder
+      }),
+    )
 
-        if (status === 'Cancelled') {
-          addNotification({
-            type: 'order_cancelled',
-            orderId: updated.id,
-          })
+    if (!updatedOrder) return
+
+    if (status === 'Paid') {
+      addNotification({
+        type: 'payment_verified',
+        orderId: updatedOrder.id,
+      })
+    }
+
+    if (status === 'Fulfilled') {
+      addNotification({
+        type: 'order_fulfilled',
+        orderId: updatedOrder.id,
+      })
+    }
+
+    if (status === 'Cancelled') {
+      addNotification({
+        type: 'order_cancelled',
+        orderId: updatedOrder.id,
+      })
+    }
+  }
+
+  const updateOrder = (id, updates) => {
+    setOrders((prev) =>
+      prev.map((order) => (order.id === id ? { ...order, ...updates } : order)),
+    )
+  }
+
+  const markPaymentVerified = (id) => {
+    let didUpdate = false
+    setOrders((prev) =>
+      prev.map((order) => {
+        if (order.id !== id) return order
+        if (order.payment?.status === 'Verified' && order.status === 'Paid') {
+          return order
         }
+        didUpdate = true
+        const nextPayment = {
+          ...(order.payment || {}),
+          status: 'Verified',
+          verifiedAt: new Date().toISOString(),
+          failureReason: '',
+        }
+        return { ...order, status: 'Paid', payment: nextPayment }
+      }),
+    )
+    if (didUpdate) {
+      addNotification({
+        type: 'payment_verified',
+        orderId: id,
+      })
+    }
+  }
 
-        return updated
+  const markPaymentFailed = (id, reason = 'Payment could not be verified yet.') => {
+    let didUpdate = false
+    setOrders((prev) =>
+      prev.map((order) => {
+        if (order.id !== id) return order
+        if (order.status === 'Cancelled') return order
+        if (
+          order.payment?.status === 'Verification Failed' &&
+          (order.payment?.failureReason || '') === reason
+        ) {
+          return order
+        }
+        didUpdate = true
+        const nextPayment = {
+          ...(order.payment || {}),
+          status: 'Verification Failed',
+          failureReason: reason,
+          verifiedAt: '',
+        }
+        return {
+          ...order,
+          status: order.status === 'Paid' ? 'Pending' : order.status,
+          payment: nextPayment,
+        }
+      }),
+    )
+
+    if (didUpdate) {
+      addNotification({
+        type: 'payment_failed',
+        orderId: id,
+      })
+    }
+  }
+
+  const markPaymentPending = (id) => {
+    setOrders((prev) =>
+      prev.map((order) => {
+        if (order.id !== id) return order
+        const nextPayment = {
+          ...(order.payment || {}),
+          status: 'Pending Verification',
+          failureReason: '',
+          verifiedAt: '',
+        }
+        return {
+          ...order,
+          status: order.status === 'Cancelled' ? order.status : 'Pending',
+          payment: nextPayment,
+        }
       }),
     )
   }
@@ -130,6 +232,10 @@ export const OrdersProvider = ({ children }) => {
       orders,
       addOrder,
       updateOrderStatus,
+      updateOrder,
+      markPaymentVerified,
+      markPaymentFailed,
+      markPaymentPending,
       clearOrders,
       notifications,
       unseenCount,

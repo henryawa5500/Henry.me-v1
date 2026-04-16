@@ -8,6 +8,14 @@ const notificationCopy = {
     title: 'New order received',
     subtitle: 'A new order is waiting to be fulfilled.',
   },
+  payment_verified: {
+    title: 'Payment verified',
+    subtitle: 'Bank transfer has been verified.',
+  },
+  payment_failed: {
+    title: 'Payment verification failed',
+    subtitle: 'Transfer could not be verified yet.',
+  },
   order_fulfilled: {
     title: 'Order fulfilled',
     subtitle: 'Order has been marked as fulfilled.',
@@ -95,7 +103,7 @@ const NotificationsPanel = ({
         role="dialog"
         aria-label="Notifications"
         className={cn(
-          'absolute right-0 top-12 w-72 rounded-xl border border-border bg-white p-4 shadow-lg',
+          'fixed left-4 right-4 top-16 w-auto rounded-xl border border-border bg-white p-4 shadow-lg sm:absolute sm:left-auto sm:right-0 sm:top-12 sm:w-72',
           className,
         )}
       >
@@ -233,6 +241,28 @@ const NotificationsPanel = ({
                 </span>
               </div>
             </div>
+
+            {selectedOrder.payment?.method ? (
+              <div className="rounded-xl border border-border p-4 text-xs text-muted">
+                <p className="text-xs uppercase tracking-[0.2em]">
+                  Payment
+                </p>
+                <p className="mt-2">
+                  Method:{' '}
+                  <span className="font-semibold text-primary">
+                    {selectedOrder.payment.method}
+                  </span>
+                </p>
+                {selectedOrder.payment.reference ? (
+                  <p className="mt-1">
+                    Reference: {selectedOrder.payment.reference}
+                  </p>
+                ) : null}
+                {selectedOrder.payment.status ? (
+                  <p className="mt-1">Status: {selectedOrder.payment.status}</p>
+                ) : null}
+              </div>
+            ) : null}
           </div>
         ) : (
           <div className="text-sm text-muted">Order details not available.</div>

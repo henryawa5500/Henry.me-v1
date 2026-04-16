@@ -8,14 +8,22 @@ import { formatCurrency } from '../utils/formatCurrency.js'
 import { getDiscountStatus, getDiscountedPrice, isDiscountActive } from '../utils/discounts.js'
 
 const tagOptions = ['New Arrivals', 'Best Sellers']
+const orderFilters = ['All', 'Pending', 'Paid', 'Fulfilled', 'Cancelled']
 
 const Admin = () => {
-  const { products, addProduct, updateProduct, removeProduct, resetProducts } =
-    useProducts()
-  const { orders, updateOrderStatus } = useOrders()
+  const {
+    products,
+    addProduct,
+    updateProduct,
+    updateMany,
+    removeProduct,
+    resetProducts,
+  } = useProducts()
+  const { orders, updateOrderStatus, markPaymentVerified, markPaymentFailed } = useOrders()
   const [formData, setFormData] = useState({
     name: '',
     price: '',
+    stock: '',
     tags: [],
     discountEnabled: false,
     discountPercent: '',
@@ -31,6 +39,16 @@ const Admin = () => {
     start: '',
     end: '',
   })
+  const [editingId, setEditingId] = useState(null)
+  const [editFields, setEditFields] = useState({
+    name: '',
+    price: '',
+    stock: '',
+    image: '',
+    imageName: '',
+  })
+  const [orderFilter, setOrderFilter] = useState('Pending')
+  const [bulkStock, setBulkStock] = useState('')
 
   useEffect(() => {
     if (!selectedId && products.length) {
@@ -45,15 +63,18 @@ const Admin = () => {
     [products, selectedId],
   )
 
-  const pendingOrders = useMemo(
-    () => orders.filter((order) => order.status === 'Pending'),
-    [orders],
-  )
+  const filteredOrders = useMemo(() => {
+    const sorted = [...orders].sort(
+      (a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime(),
+    )
+    if (orderFilter === 'All') return sorted
+    return sorted.filter((order) => order.status === orderFilter)
+  }, [orders, orderFilter])
 
   const formatOrderDate = (value) => {
-    if (!value) return '—'
+    if (!value) return '-'
     const parsed = new Date(value)
-    if (Number.isNaN(parsed.getTime())) return '—'
+    if (Number.isNaN(parsed.getTime())) return '-'
     return parsed.toLocaleDateString('en-GB', {
       day: '2-digit',
       month: 'short',
@@ -100,10 +121,25 @@ const Admin = () => {
     reader.readAsDataURL(file)
   }
 
+  const handleEditImageChange = (event) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = () => {
+      setEditFields((prev) => ({
+        ...prev,
+        image: String(reader.result),
+        imageName: file.name,
+      }))
+    }
+    reader.readAsDataURL(file)
+  }
+
   const resetForm = () => {
     setFormData({
       name: '',
       price: '',
+      stock: '',
       tags: [],
       discountEnabled: false,
       discountPercent: '',
@@ -118,6 +154,7 @@ const Admin = () => {
     event.preventDefault()
     const trimmedName = formData.name.trim()
     const priceValue = Number(formData.price)
+    const stockValue = Number(formData.stock)
     if (!trimmedName || Number.isNaN(priceValue) || priceValue <= 0) return
 
     const discountEnabled = Boolean(formData.discountEnabled)
@@ -125,6 +162,7 @@ const Admin = () => {
     const nextProduct = {
       name: trimmedName,
       price: priceValue,
+      stock: Number.isNaN(stockValue) ? 0 : Math.max(stockValue, 0),
       tags: formData.tags,
       image: imagePreview || '',
       discount: discountEnabled
@@ -169,6 +207,43 @@ const Admin = () => {
     Number.isNaN(Number(formData.price)) ||
     Number(formData.price) <= 0
 
+  const startEditProduct = (product) => {
+    setEditingId(product.id)
+    setEditFields({
+      name: product.name || '',
+      price: product.price ?? '',
+      stock: product.stock ?? '',
+      image: product.image || '',
+      imageName: '',
+    })
+  }
+
+  const cancelEditProduct = () => {
+    setEditingId(null)
+    setEditFields({ name: '', price: '', stock: '', image: '', imageName: '' })
+  }
+
+  const saveEditProduct = (product) => {
+    const trimmedName = editFields.name.trim()
+    const priceValue = Number(editFields.price)
+    const stockValue = Number(editFields.stock)
+    if (!trimmedName || Number.isNaN(priceValue) || priceValue <= 0) return
+    updateProduct(product.id, {
+      name: trimmedName,
+      price: priceValue,
+      stock: Number.isNaN(stockValue) ? 0 : Math.max(stockValue, 0),
+      image: editFields.image || product.image || '',
+    })
+    cancelEditProduct()
+  }
+
+  const handleBulkStockApply = () => {
+    const value = Number(bulkStock)
+    if (Number.isNaN(value) || value < 0) return
+    updateMany((product) => ({ ...product, stock: Math.floor(value) }))
+    setBulkStock('')
+  }
+
   return (
     <div className="page-transition space-y-8">
       <div className="flex flex-wrap items-center justify-between gap-4">
@@ -199,13 +274,22 @@ const Admin = () => {
               onChange={handleInputChange('name')}
             />
             <Input
-              label="Price (₦)"
+              label="Price (NGN)"
               type="number"
               min="0"
               step="100"
               placeholder="15000"
               value={formData.price}
               onChange={handleInputChange('price')}
+            />
+            <Input
+              label="Stock quantity"
+              type="number"
+              min="0"
+              step="1"
+              placeholder="10"
+              value={formData.stock}
+              onChange={handleInputChange('stock')}
             />
 
             <div>
@@ -317,21 +401,52 @@ const Admin = () => {
           <div className="rounded-2xl border border-border bg-white p-6">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-lg font-semibold">Pending Orders</h2>
+                <h2 className="text-lg font-semibold">Orders</h2>
                 <p className="mt-1 text-xs text-muted">
-                  Orders waiting to be fulfilled.
+                  Review payment status and approve verified transfers.
                 </p>
               </div>
               <Badge className="bg-black text-white">
-                {pendingOrders.length}
+                {filteredOrders.length}
               </Badge>
             </div>
 
+            <div className="mt-4 flex flex-wrap gap-2">
+              {orderFilters.map((filter) => (
+                <button
+                  key={filter}
+                  type="button"
+                  onClick={() => setOrderFilter(filter)}
+                  className={`rounded-full border px-3 py-1 text-xs font-medium transition focus-ring ${
+                    orderFilter === filter
+                      ? 'border-black bg-black text-white'
+                      : 'border-border bg-white text-muted hover:border-black hover:text-primary'
+                  }`}
+                >
+                  {filter}
+                </button>
+              ))}
+            </div>
+
             <div className="mt-4 space-y-4">
-              {pendingOrders.length === 0 ? (
-                <p className="text-sm text-muted">No pending orders yet.</p>
+              {filteredOrders.length === 0 ? (
+                <p className="text-sm text-muted">No orders for this filter yet.</p>
               ) : (
-                pendingOrders.map((order) => (
+                filteredOrders.map((order) => {
+                  const paymentStatus =
+                    order.payment?.status || 'Pending Verification'
+                  const isPaymentVerified = paymentStatus === 'Verified'
+                  const canApprovePayment =
+                    !isPaymentVerified && order.status !== 'Cancelled'
+                  const canMarkPaymentFailed =
+                    paymentStatus !== 'Verification Failed' &&
+                    !isPaymentVerified &&
+                    order.status !== 'Cancelled'
+                  const canFulfill =
+                    isPaymentVerified &&
+                    order.status !== 'Fulfilled' &&
+                    order.status !== 'Cancelled'
+                  return (
                   <div
                     key={order.id}
                     className="rounded-xl border border-border p-4"
@@ -347,6 +462,7 @@ const Admin = () => {
                       </div>
                       <div className="text-right text-xs text-muted">
                         <p>{getOrderItemsCount(order)} items</p>
+                        <p className="mt-1">Payment: {paymentStatus}</p>
                         <p className="mt-1 text-sm font-semibold text-primary">
                           {formatCurrency(order.total ?? order.summary?.total ?? 0)}
                         </p>
@@ -370,22 +486,41 @@ const Admin = () => {
                     </div>
 
                     <div className="mt-4 flex flex-wrap gap-3">
-                      <Button
-                        size="sm"
-                        onClick={() => updateOrderStatus(order.id, 'Fulfilled')}
-                      >
-                        Mark Fulfilled
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => updateOrderStatus(order.id, 'Cancelled')}
-                      >
-                        Cancel Order
-                      </Button>
+                      {canApprovePayment ? (
+                        <Button size="sm" onClick={() => markPaymentVerified(order.id)}>
+                          Approve Payment
+                        </Button>
+                      ) : null}
+                      {canMarkPaymentFailed ? (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => markPaymentFailed(order.id)}
+                        >
+                          Mark Payment Failed
+                        </Button>
+                      ) : null}
+                      {canFulfill ? (
+                        <Button
+                          size="sm"
+                          onClick={() => updateOrderStatus(order.id, 'Fulfilled')}
+                        >
+                          Mark Fulfilled
+                        </Button>
+                      ) : null}
+                      {order.status !== 'Cancelled' ? (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => updateOrderStatus(order.id, 'Cancelled')}
+                        >
+                          Cancel Order
+                        </Button>
+                      ) : null}
                     </div>
                   </div>
-                ))
+                  )
+                })
               )}
             </div>
           </div>
@@ -485,6 +620,26 @@ const Admin = () => {
 
           <div className="rounded-2xl border border-border bg-white p-6">
             <h2 className="text-lg font-semibold">Current Products</h2>
+            <div className="mt-4 rounded-xl border border-border bg-[#F8F8F8] p-4">
+              <p className="text-sm font-medium text-primary">Bulk Stock Update</p>
+              <p className="mt-1 text-xs text-muted">
+                Set the same stock quantity for all products quickly.
+              </p>
+              <div className="mt-3 flex flex-wrap items-end gap-3">
+                <Input
+                  label="Stock for all"
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={bulkStock}
+                  onChange={(event) => setBulkStock(event.target.value)}
+                  className="max-w-[180px]"
+                />
+                <Button size="sm" onClick={handleBulkStockApply}>
+                  Apply
+                </Button>
+              </div>
+            </div>
             <div className="mt-4 space-y-4">
               {!hasProducts ? (
                 <p className="text-sm text-muted">No products yet.</p>
@@ -494,6 +649,10 @@ const Admin = () => {
                   const discountedPrice = getDiscountedPrice(product)
                   const hasDiscount =
                     isDiscountActive(product) && discountedPrice !== null
+                  const stockCount =
+                    typeof product.stock === 'number' ? product.stock : null
+                  const isOutOfStock = stockCount !== null && stockCount <= 0
+                  const isEditing = editingId === product.id
                   return (
                     <div
                       key={product.id}
@@ -511,19 +670,106 @@ const Admin = () => {
                         )}
                       </div>
                       <div className="flex-1">
-                        <p className="text-sm font-semibold">{product.name}</p>
-                        <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted">
-                          <span className="font-semibold text-primary">
-                            {formatCurrency(
-                              hasDiscount ? discountedPrice : product.price,
-                            )}
-                          </span>
-                          {hasDiscount ? (
-                            <span className="line-through">
-                              {formatCurrency(product.price)}
-                            </span>
-                          ) : null}
-                        </div>
+                        {isEditing ? (
+                          <div className="space-y-3">
+                            <div className="grid gap-2 sm:grid-cols-3">
+                              <label className="text-xs font-medium text-primary">
+                                Name
+                                <input
+                                  value={editFields.name}
+                                  onChange={(event) =>
+                                    setEditFields((prev) => ({
+                                      ...prev,
+                                      name: event.target.value,
+                                    }))
+                                  }
+                                  className="mt-1 h-9 w-full rounded-lg border border-border px-3 text-xs focus-ring"
+                                />
+                              </label>
+                              <label className="text-xs font-medium text-primary">
+                                Price (NGN)
+                                <input
+                                  type="number"
+                                  min="0"
+                                  step="100"
+                                  value={editFields.price}
+                                  onChange={(event) =>
+                                    setEditFields((prev) => ({
+                                      ...prev,
+                                      price: event.target.value,
+                                    }))
+                                  }
+                                  className="mt-1 h-9 w-full rounded-lg border border-border px-3 text-xs focus-ring"
+                                />
+                              </label>
+                              <label className="text-xs font-medium text-primary">
+                                Stock
+                                <input
+                                  type="number"
+                                  min="0"
+                                  step="1"
+                                  value={editFields.stock}
+                                  onChange={(event) =>
+                                    setEditFields((prev) => ({
+                                      ...prev,
+                                      stock: event.target.value,
+                                    }))
+                                  }
+                                  className="mt-1 h-9 w-full rounded-lg border border-border px-3 text-xs focus-ring"
+                                />
+                              </label>
+                            </div>
+                            <div className="flex flex-wrap items-center gap-3">
+                              <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-lg border border-border bg-[#F6F6F6]">
+                                {editFields.image ? (
+                                  <img
+                                    src={editFields.image}
+                                    alt={editFields.name || 'Preview'}
+                                    className="h-full w-full object-cover"
+                                  />
+                                ) : (
+                                  <span className="text-[10px] text-muted">Image</span>
+                                )}
+                              </div>
+                              <div className="flex-1">
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  onChange={handleEditImageChange}
+                                  className="w-full rounded-lg border border-border bg-white px-3 py-2 text-xs focus-ring"
+                                />
+                                {editFields.imageName ? (
+                                  <p className="mt-1 text-[10px] text-muted">
+                                    {editFields.imageName}
+                                  </p>
+                                ) : null}
+                              </div>
+                            </div>
+                          </div>
+                        ) : (
+                          <>
+                            <p className="text-sm font-semibold">{product.name}</p>
+                            <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted">
+                              <span className="font-semibold text-primary">
+                                {formatCurrency(
+                                  hasDiscount ? discountedPrice : product.price,
+                                )}
+                              </span>
+                              {hasDiscount ? (
+                                <span className="line-through">
+                                  {formatCurrency(product.price)}
+                                </span>
+                              ) : null}
+                            </div>
+                            {stockCount !== null ? (
+                              <p className="mt-1 text-xs text-muted">
+                                {isOutOfStock
+                                  ? 'Out of stock'
+                                  : `Stock: ${stockCount}`}
+                              </p>
+                            ) : null}
+                          </>
+                        )}
                       </div>
                       <Badge
                         className={
@@ -534,13 +780,37 @@ const Admin = () => {
                       >
                         {status}
                       </Badge>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => removeProduct(product.id)}
-                      >
-                        Remove
-                      </Button>
+                      {isEditing ? (
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Button size="sm" onClick={() => saveEditProduct(product)}>
+                            Save
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={cancelEditProduct}
+                          >
+                            Cancel
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => startEditProduct(product)}
+                          >
+                            Edit
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeProduct(product.id)}
+                          >
+                            Remove
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   )
                 })

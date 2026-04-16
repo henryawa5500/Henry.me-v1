@@ -3,6 +3,7 @@ import TopNav from './TopNav.jsx'
 import BottomNav from './BottomNav.jsx'
 import MobileTopBar from './MobileTopBar.jsx'
 import NotificationsToast from '../ui/NotificationsToast.jsx'
+import CartToast from '../ui/CartToast.jsx'
 
 const ShopLayout = () => (
   <div className="min-h-screen bg-white text-primary">
@@ -13,6 +14,7 @@ const ShopLayout = () => (
     </main>
     <BottomNav />
     <NotificationsToast />
+    <CartToast />
   </div>
 )
 
