@@ -2,6 +2,14 @@ const API_BASE =
   import.meta.env.VITE_API_URL || (import.meta.env.PROD ? '/api' : 'http://localhost:4000')
 const STORAGE_KEY = 'henryme-session'
 
+const getApiOrigin = () =>
+  typeof window !== 'undefined' ? window.location.origin : 'http://localhost'
+
+const resolveApiBase = () => {
+  if (API_BASE.startsWith('http')) return API_BASE
+  return new URL(API_BASE, getApiOrigin()).toString()
+}
+
 const getAuthToken = () => {
   if (typeof window === 'undefined') return null
   const raw = window.localStorage.getItem(STORAGE_KEY)
@@ -15,7 +23,7 @@ const getAuthToken = () => {
 }
 
 const buildUrl = (path, query) => {
-  const url = path.startsWith('http') ? new URL(path) : new URL(path, API_BASE)
+  const url = path.startsWith('http') ? new URL(path) : new URL(path, resolveApiBase())
   if (query && typeof query === 'object') {
     Object.entries(query).forEach(([key, value]) => {
       if (value !== undefined && value !== null && value !== '') {

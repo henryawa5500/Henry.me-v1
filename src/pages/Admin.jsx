@@ -11,9 +11,7 @@ const tagOptions = ['New Arrivals', 'Best Sellers']
 const orderFilters = ['All', 'Pending', 'Paid', 'Fulfilled', 'Cancelled']
 const API_BASE =
   import.meta.env.VITE_API_URL || (import.meta.env.PROD ? '/api' : 'http://localhost:4000')
-const UPLOAD_URL = import.meta.env.PROD && !import.meta.env.VITE_API_URL
-  ? '/api/upload'
-  : `${API_BASE}/api/upload`
+const UPLOAD_URL = API_BASE.endsWith('/api') ? `${API_BASE}/upload` : `${API_BASE}/api/upload`
 
 const Admin = () => {
   const {
