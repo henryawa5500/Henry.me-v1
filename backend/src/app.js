@@ -1,5 +1,6 @@
 import fs from 'fs'
 import path from 'path'
+import 'dotenv/config'
 import 'express-async-errors'
 import express from 'express'
 import cors from 'cors'
