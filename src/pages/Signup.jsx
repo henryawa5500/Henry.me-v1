@@ -14,8 +14,9 @@ const Signup = () => {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
+  const [error, setError] = useState('')
   const navigate = useNavigate()
-  const { login } = useAuth()
+  const { signup } = useAuth()
 
   const isValid =
     firstName.trim() &&
@@ -25,11 +26,17 @@ const Signup = () => {
     confirmPassword.trim() &&
     password === confirmPassword
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault()
     if (!isValid) return
-    login({ name: `${firstName} ${lastName}`, email })
-    navigate('/home')
+
+    try {
+      setError('')
+      await signup({ name: `${firstName} ${lastName}`, email, password })
+      navigate('/home')
+    } catch (err) {
+      setError(err.message || 'Unable to create account')
+    }
   }
 
   return (
@@ -148,6 +155,7 @@ const Signup = () => {
             <Button full disabled={!isValid} type="submit">
               Create Account
             </Button>
+            {error ? <p className="mt-3 text-sm text-red-600">{error}</p> : null}
           </form>
 
           <p className="mt-4 text-xs text-muted">

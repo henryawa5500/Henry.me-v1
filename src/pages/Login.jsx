@@ -17,16 +17,23 @@ const Login = () => {
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [remember, setRemember] = useState(true)
+  const [error, setError] = useState('')
   const navigate = useNavigate()
   const { login } = useAuth()
 
   const isValid = email.trim() && password.trim()
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault()
     if (!isValid) return
-    login({ name: 'Henry', email })
-    navigate('/home')
+
+    try {
+      setError('')
+      await login({ email, password })
+      navigate('/home')
+    } catch (err) {
+      setError(err.message || 'Unable to sign in')
+    }
   }
 
   return (
@@ -125,6 +132,9 @@ const Login = () => {
             <Button full disabled={!isValid} type="submit">
               Continue
             </Button>
+            {error ? (
+              <p className="mt-3 text-sm text-red-600">{error}</p>
+            ) : null}
           </form>
 
           <div className="my-6 flex items-center gap-3 text-xs text-muted">

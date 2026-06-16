@@ -9,6 +9,11 @@ import { getDiscountStatus, getDiscountedPrice, isDiscountActive } from '../util
 
 const tagOptions = ['New Arrivals', 'Best Sellers']
 const orderFilters = ['All', 'Pending', 'Paid', 'Fulfilled', 'Cancelled']
+const API_BASE =
+  import.meta.env.VITE_API_URL || (import.meta.env.PROD ? '/api' : 'http://localhost:4000')
+const UPLOAD_URL = import.meta.env.PROD && !import.meta.env.VITE_API_URL
+  ? '/api/upload'
+  : `${API_BASE}/api/upload`
 
 const Admin = () => {
   const {
@@ -32,6 +37,8 @@ const Admin = () => {
   })
   const [imagePreview, setImagePreview] = useState('')
   const [imageName, setImageName] = useState('')
+  const [imageFile, setImageFile] = useState(null)
+  const [isUploading, setIsUploading] = useState(false)
   const [selectedId, setSelectedId] = useState('')
   const [discountForm, setDiscountForm] = useState({
     enabled: false,
@@ -46,7 +53,9 @@ const Admin = () => {
     stock: '',
     image: '',
     imageName: '',
+    imageFile: null,
   })
+  const [editUploading, setEditUploading] = useState(false)
   const [orderFilter, setOrderFilter] = useState('Pending')
   const [bulkStock, setBulkStock] = useState('')
 
@@ -97,6 +106,42 @@ const Admin = () => {
     })
   }, [selectedProduct])
 
+  const uploadImageFile = async (file) => {
+    if (!file) return null
+    const formData = new FormData()
+    formData.append('image', file)
+    // Read token from localStorage to match AuthContext storage
+    let token = ''
+    try {
+      const raw = typeof window !== 'undefined' ? window.localStorage.getItem('henryme-session') : null
+      if (raw) {
+        const parsed = JSON.parse(raw)
+        token = parsed?.token || ''
+      }
+    } catch (e) {
+      // ignore parse errors
+    }
+
+    const headers = {}
+    if (token) headers.Authorization = `Bearer ${token}`
+
+    try {
+      const response = await fetch(UPLOAD_URL, {
+        method: 'POST',
+        headers,
+        body: formData,
+      })
+      if (!response.ok) {
+        throw new Error('Upload failed')
+      }
+      const data = await response.json()
+      return data.url
+    } catch (error) {
+      console.error('Image upload error:', error)
+      return null
+    }
+  }
+
   const handleInputChange = (key) => (event) => {
     setFormData((prev) => ({ ...prev, [key]: event.target.value }))
   }
@@ -114,28 +159,27 @@ const Admin = () => {
     const file = event.target.files?.[0]
     if (!file) return
     setImageName(file.name)
-    const reader = new FileReader()
-    reader.onload = () => {
-      setImagePreview(String(reader.result))
-    }
-    reader.readAsDataURL(file)
+    setImageFile(file)
+    const previewUrl = URL.createObjectURL(file)
+    setImagePreview(previewUrl)
   }
 
   const handleEditImageChange = (event) => {
     const file = event.target.files?.[0]
     if (!file) return
-    const reader = new FileReader()
-    reader.onload = () => {
-      setEditFields((prev) => ({
-        ...prev,
-        image: String(reader.result),
-        imageName: file.name,
-      }))
-    }
-    reader.readAsDataURL(file)
+    const previewUrl = URL.createObjectURL(file)
+    setEditFields((prev) => ({
+      ...prev,
+      image: previewUrl,
+      imageName: file.name,
+      imageFile: file,
+    }))
   }
 
   const resetForm = () => {
+    if (imagePreview && imagePreview.startsWith('blob:')) {
+      URL.revokeObjectURL(imagePreview)
+    }
     setFormData({
       name: '',
       price: '',
@@ -148,14 +192,28 @@ const Admin = () => {
     })
     setImagePreview('')
     setImageName('')
+    setImageFile(null)
   }
 
-  const handleAddProduct = (event) => {
+  const handleAddProduct = async (event) => {
     event.preventDefault()
     const trimmedName = formData.name.trim()
     const priceValue = Number(formData.price)
     const stockValue = Number(formData.stock)
     if (!trimmedName || Number.isNaN(priceValue) || priceValue <= 0) return
+
+    setIsUploading(true)
+    let finalImageUrl = ''
+
+    if (imageFile) {
+      const uploadedUrl = await uploadImageFile(imageFile)
+      if (!uploadedUrl) {
+        setIsUploading(false)
+        alert('Image upload failed. Product not created.')
+        return
+      }
+      finalImageUrl = uploadedUrl
+    }
 
     const discountEnabled = Boolean(formData.discountEnabled)
     const discountPercent = Number(formData.discountPercent || 10)
@@ -164,7 +222,7 @@ const Admin = () => {
       price: priceValue,
       stock: Number.isNaN(stockValue) ? 0 : Math.max(stockValue, 0),
       tags: formData.tags,
-      image: imagePreview || '',
+      imageUrl: finalImageUrl,
       discount: discountEnabled
         ? {
             enabled: true,
@@ -176,6 +234,7 @@ const Admin = () => {
     }
 
     addProduct(nextProduct)
+    setIsUploading(false)
     resetForm()
   }
 
@@ -202,6 +261,7 @@ const Admin = () => {
   }
 
   const isAddDisabled =
+    isUploading ||
     !formData.name.trim() ||
     !formData.price ||
     Number.isNaN(Number(formData.price)) ||
@@ -223,17 +283,29 @@ const Admin = () => {
     setEditFields({ name: '', price: '', stock: '', image: '', imageName: '' })
   }
 
-  const saveEditProduct = (product) => {
+  const saveEditProduct = async (product) => {
     const trimmedName = editFields.name.trim()
     const priceValue = Number(editFields.price)
     const stockValue = Number(editFields.stock)
     if (!trimmedName || Number.isNaN(priceValue) || priceValue <= 0) return
+
+    setEditUploading(true)
+    let finalImageUrl = editFields.image || product.image || ''
+
+    if (editFields.imageFile) {
+      const uploadedUrl = await uploadImageFile(editFields.imageFile)
+      if (uploadedUrl) {
+        finalImageUrl = uploadedUrl
+      }
+    }
+
     updateProduct(product.id, {
       name: trimmedName,
       price: priceValue,
       stock: Number.isNaN(stockValue) ? 0 : Math.max(stockValue, 0),
-      image: editFields.image || product.image || '',
+      imageUrl: finalImageUrl,
     })
+    setEditUploading(false)
     cancelEditProduct()
   }
 
@@ -393,7 +465,7 @@ const Admin = () => {
           </div>
 
           <Button full className="mt-6" disabled={isAddDisabled} type="submit">
-            Add Product
+            {isUploading ? 'Uploading image...' : 'Add Product'}
           </Button>
         </form>
 
@@ -782,13 +854,14 @@ const Admin = () => {
                       </Badge>
                       {isEditing ? (
                         <div className="flex flex-wrap items-center gap-2">
-                          <Button size="sm" onClick={() => saveEditProduct(product)}>
-                            Save
+                          <Button size="sm" onClick={() => saveEditProduct(product)} disabled={editUploading}>
+                            {editUploading ? 'Uploading...' : 'Save'}
                           </Button>
                           <Button
                             size="sm"
                             variant="outline"
                             onClick={cancelEditProduct}
+                            disabled={editUploading}
                           >
                             Cancel
                           </Button>

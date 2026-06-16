@@ -80,12 +80,14 @@ const TopNav = () => {
         </div>
 
         <div className="flex items-center gap-4">
-          <Link
-            to="/admin"
-            className="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary transition hover:border-primary focus-ring"
-          >
-            Admin
-          </Link>
+          {isLoggedIn && user?.role === 'admin' && (
+            <Link
+              to="/admin"
+              className="rounded-lg border border-border px-3 py-2 text-xs font-semibold text-primary transition hover:border-primary focus-ring"
+            >
+              Admin
+            </Link>
+          )}
           <button
             type="button"
             aria-label="Search"

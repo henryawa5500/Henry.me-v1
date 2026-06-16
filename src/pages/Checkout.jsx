@@ -41,20 +41,9 @@ const Checkout = () => {
     setReceiptName(file.name)
   }
 
-  const handlePayNow = () => {
+  const handlePayNow = async () => {
     if (isProcessing) return
     setIsProcessing(true)
-
-    const paymentPayload = {
-      method: 'Bank Transfer',
-      beneficiary: 'Henry Awa',
-      bank: 'Moniepoint',
-      accountName: 'Henry Eyinnaya Awa',
-      accountNumber: '8062098161',
-      reference: referenceRef.current,
-      status: 'Pending Verification',
-      receiptName: receiptName || '',
-    }
 
     const orderItems = items.map((item) => ({
       productId: item.product.id,
@@ -65,21 +54,25 @@ const Checkout = () => {
       unitPrice: getEffectivePrice(item.product),
     }))
 
-    const createdId = addOrder({
-      items: orderItems,
-      subtotal,
-      deliveryFee,
-      total,
-      customer: {
-        name: user?.name || 'Guest',
-        email: user?.email || '',
-      },
-      status: 'Pending',
-      payment: paymentPayload,
-    })
+    try {
+      const createdId = await addOrder({
+        items: orderItems,
+        shippingAddress: {
+          fullName: user?.name || 'Guest',
+          phone: address.phone || '',
+          addressLine: address.addressLine || '',
+          city: address.city || '',
+          state: address.state || '',
+          notes: address.notes || '',
+        },
+      })
 
-    setIsProcessing(false)
-    navigate(`/payment-pending/${createdId}`)
+      navigate(`/payment-pending/${createdId}`)
+    } catch (error) {
+      console.error('Checkout failed:', error)
+    } finally {
+      setIsProcessing(false)
+    }
   }
 
   return (

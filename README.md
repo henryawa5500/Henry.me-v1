@@ -14,3 +14,18 @@ The React Compiler is not enabled on this template because of its impact on dev 
 ## Expanding the ESLint configuration
 
 If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+
+## Backend setup
+
+A backend implementation has been added under `backend/`. It includes authentication, product management, order tracking, payment verification, notifications, and SQLite persistence.
+
+To run the backend:
+
+```bash
+cd backend
+npm install
+cp .env.example .env
+npm run dev
+```
+
+The backend will start on `http://localhost:4000` by default.

@@ -1,5 +1,6 @@
 ﻿import { Navigate, Route, Routes } from 'react-router-dom'
 import ShopLayout from './components/layout/ShopLayout.jsx'
+import AdminRoute from './components/AdminRoute.jsx'
 import Splash from './pages/Splash.jsx'
 import Onboarding from './pages/Onboarding.jsx'
 import Login from './pages/Login.jsx'
@@ -21,7 +22,14 @@ const App = () => (
 
     <Route element={<ShopLayout />}>
       <Route path="/home" element={<Home />} />
-      <Route path="/admin" element={<Admin />} />
+      <Route
+        path="/admin"
+        element={
+          <AdminRoute>
+            <Admin />
+          </AdminRoute>
+        }
+      />
       <Route path="/product/:id" element={<ProductDetail />} />
       <Route path="/cart" element={<Cart />} />
       <Route path="/checkout" element={<Checkout />} />
