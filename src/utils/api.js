@@ -10,6 +10,12 @@ const resolveApiBase = () => {
   return new URL(API_BASE, getApiOrigin()).toString()
 }
 
+const joinApiPath = (base, path) => {
+  const normalizedBase = base.endsWith('/') ? base : `${base}/`
+  const normalizedPath = path.replace(/^\/+/, '')
+  return new URL(normalizedPath, normalizedBase)
+}
+
 const getAuthToken = () => {
   if (typeof window === 'undefined') return null
   const raw = window.localStorage.getItem(STORAGE_KEY)
@@ -23,7 +29,7 @@ const getAuthToken = () => {
 }
 
 const buildUrl = (path, query) => {
-  const url = path.startsWith('http') ? new URL(path) : new URL(path, resolveApiBase())
+  const url = path.startsWith('http') ? new URL(path) : joinApiPath(resolveApiBase(), path)
   if (query && typeof query === 'object') {
     Object.entries(query).forEach(([key, value]) => {
       if (value !== undefined && value !== null && value !== '') {
@@ -54,10 +60,15 @@ const request = async (path, options = {}) => {
   })
 
   const text = await response.text()
-  const data = text ? JSON.parse(text) : null
+  let data = null
+  try {
+    data = text ? JSON.parse(text) : null
+  } catch {
+    data = null
+  }
 
   if (!response.ok) {
-    const message = data?.error || data?.message || response.statusText || 'Request failed'
+    const message = data?.error || data?.message || response.statusText || text || 'Request failed'
     throw new Error(message)
   }
 
